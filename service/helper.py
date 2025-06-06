@@ -1,8 +1,13 @@
-
-from pathlib import Path
+# -*- coding: utf-8 -*-
+"""
+This module provides helper functions to process YouTube video transcripts.
+It includes functions to clean VTT files, download video transcripts, and fetch video metadata.
+"""
+import os
 import re
-
-
+from pathlib import Path
+from time import sleep
+import yt_dlp
 
 
 def clean_vtt_to_script(vtt_file_path_or_content, is_file_path=True):
@@ -47,3 +52,80 @@ def clean_vtt_to_script(vtt_file_path_or_content, is_file_path=True):
     text = re.sub(r'<[^>]+>', '', text)
 
     return text
+
+
+def get_video_transcript(video_id, output_file):
+    """
+    Downloads the auto-generated English subtitles for a YouTube video.
+    Args:
+        video_id (str): The YouTube video ID.
+        output_file (str): The file path to save the subtitles.
+    Notes:
+        - This function is passed to `get_all_transcripts` to download subtitles for each video.
+        - The subtitles are saved in VTT format.
+        - The function uses yt-dlp to download the subtitles, ensure yt-dlp is installed and configured correctly.
+    """
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    os.system(f'yt-dlp --write-auto-sub --sub-lang en --skip-download -o "{output_file}" "{video_url}"')
+
+
+def get_video_metadata(video_url):
+    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+        info = ydl.extract_info(video_url, download=False)
+        return {
+            "title": info.get("title"),
+            "upload_date": info.get("upload_date"),  # format: YYYYMMDD
+            "duration": info.get("duration"),        # in seconds
+            "channel": info.get("uploader"),
+            "view_count": info.get("view_count"),
+            "description": info.get("description"),
+            "tags": info.get("tags"),
+            "webpage_url": info.get("webpage_url")
+        }
+
+
+def get_channel_video_list(channel_url, limit=10):
+    '''Fetches a list of videos from a YouTube channel.
+    Args:'''
+    ydl_opts = {
+        'quiet': True,
+        'extract_flat': True,  # No need to download videos
+        'playlistend': limit   # Limit number of videos
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(channel_url, download=False)
+        videos = info.get('entries', [])
+        return [
+            {
+                'title': v.get('title'),
+                'url': f"https://www.youtube.com/watch?v={v.get('id')}",
+                'id': v.get('id'),
+                'view_count': v.get('view_count'),
+            }
+            for v in videos
+        ]
+
+
+
+
+def get_all_transcripts(get_video_transcript, row, index):
+    #url = row['webpage_url'].values[0]
+    url = row.webpage_url
+    VIDEO_ID = url.split('v=')[-1]  # Extract video ID from URL
+    #udate = row['upload_date'].values[0]  # Get upload date
+    udate = row.upload_date # Get upload date
+    print(f"Video ID: {VIDEO_ID}, Upload Date: {udate}")
+    output_dir = "output"
+    output_file_noext = f"{output_dir}/transcript/{udate}"
+    output_file = f"{output_file_noext}.en.vtt"
+    os.makedirs(output_dir, exist_ok=True)
+    get_video_transcript(VIDEO_ID, output_file_noext)
+    sleep(1)  # Wait for the file to be created
+    # convert
+    with open(output_file, "r", encoding="utf-8") as f:
+        vtt_content = f.read()
+    cleaned = clean_vtt_to_script(vtt_content, is_file_path=False)
+    with open(f"output/cleaned/{udate}.txt", "w", encoding="utf-8") as f:
+        f.write(cleaned)
+    print(f"{index}:Transcript for video {VIDEO_ID} downloaded to {output_file}")
