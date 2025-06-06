@@ -84,10 +84,10 @@ def extract_stocks_from_transcript(transcript_text, llm_model="gpt-4.1-mini"):
 if __name__ == "__main__":
     import json
     video_id = "20250605"
-    #model = "gpt-4.1-mini"  # Change to your preferred model
-    #model = "gpt-4o-mini"  # Change to your preferred model
-    #model = "gpt-4o"  # Change to your preferred model
-    model = "o4-mini"  # Change to your preferred model
+    #model = "gpt-4.1-mini"  # Change to your preferred model rank #1
+    #model = "gpt-4o-mini"  # Change to your preferred model rank #2
+    #model = "gpt-4o"  # Change to your preferred model rank unknown
+    model = "o4-mini"  # Change to your preferred model , rank #3
     with open(f"output/cleaned/{video_id}.txt", "r", encoding="utf-8") as f:
         transcript = f.read().strip()
     output = extract_stocks_from_transcript(transcript, llm_model=model)
