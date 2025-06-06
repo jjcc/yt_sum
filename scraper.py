@@ -1,6 +1,8 @@
 import os
+from time import sleep
 import yt_dlp
 import pandas as pd
+from service.helper import clean_vtt_to_script
 
 
 def get_video_transcript(video_id, output_file):
@@ -62,6 +64,27 @@ def get_channel_video_list(channel_url, limit=10):
 
 
 
+def get_all_transcripts(get_video_transcript, row, index):
+    #url = row['webpage_url'].values[0]
+    url = row.webpage_url
+    VIDEO_ID = url.split('v=')[-1]  # Extract video ID from URL
+    #udate = row['upload_date'].values[0]  # Get upload date
+    udate = row.upload_date # Get upload date
+    print(f"Video ID: {VIDEO_ID}, Upload Date: {udate}")
+    output_dir = "output"
+    output_file_noext = f"{output_dir}/transcript/{udate}"
+    output_file = f"{output_file_noext}.en.vtt"
+    os.makedirs(output_dir, exist_ok=True)
+    get_video_transcript(VIDEO_ID, output_file_noext)
+    sleep(1)  # Wait for the file to be created
+    # convert
+    with open(output_file, "r", encoding="utf-8") as f:
+        vtt_content = f.read()
+    cleaned = clean_vtt_to_script(vtt_content)
+    with open(f"output/cleaned/{udate}.txt", "w", encoding="utf-8") as f:
+        f.write(cleaned)
+    print(f"{index}:Transcript for video {VIDEO_ID} downloaded to {output_file}")
+
 if __name__ == "__main__":
     #####1. get video list from a channel
     #channel_url = "https://www.youtube.com/@dylanrieger7651/videos" 
@@ -72,28 +95,21 @@ if __name__ == "__main__":
     #    print(v)
 
     ####2. get metadata for a specific video
-    #VIDEO_ID = "Jhvyjm7XlZQ"
-    #url = f"https://www.youtube.com/watch?v={VIDEO_ID}"
-    df = pd.read_csv("output/channel_videos.csv", encoding='utf-8-sig')
-    metalist = []
+    #df = pd.read_csv("output/channel_videos.csv", encoding='utf-8-sig')
+    #metalist = []
+    #for index, row in df.iterrows():
+    #    video_id = row['id']
+    #    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    #    metadata = get_video_metadata(video_url)
+    #    metalist.append(metadata)
+    #    print(f"Metadata for {video_id}: {metadata}")
+    #df_metadata = pd.DataFrame(metalist)
+    #df_metadata.to_csv("output/video_metadata.csv", index=False, encoding='utf-8-sig')
+
+
+    ####3. get transcript for a specific video
+    df = pd.read_csv("output/video_metadata.csv", encoding='utf-8-sig')
+    df0 = df.iloc[0:1]  # Get the first row
     for index, row in df.iterrows():
-        video_id = row['id']
-        video_url = f"https://www.youtube.com/watch?v={video_id}"
-        metadata = get_video_metadata(video_url)
-        metalist.append(metadata)
-        print(f"Metadata for {video_id}: {metadata}")
-    df_metadata = pd.DataFrame(metalist)
-    df_metadata.to_csv("output/video_metadata.csv", index=False, encoding='utf-8-sig')
-    #metadata = get_video_metadata(url)
-    #with open("output/video_metadata.json", "w", encoding="utf-8") as f:
-    #    import json
-    #    json.dump(metadata, f, ensure_ascii=False, indent=4)
-
-
-    #print(metadata)
-    #output_dir = "output"
-    #output_file = f"{output_dir}/my_subs.en.vtt"
-    #os.makedirs(output_dir, exist_ok=True)
-    #get_video_transcript(VIDEO_ID, output_file)
-    #print(f"Transcript for video {VIDEO_ID} downloaded to {output_file}")
-Get $50 Off Alpha Picks: https://link.seekingalpha.com/3MC6TXH/4HKP84/
+        get_all_transcripts(get_video_transcript, row, index)
+        #print(f"Processing video {index + 1}/{len(df0)}: {row['title']}")
