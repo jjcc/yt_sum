@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 
 
 def get_video_transcript(video_id, output_file):
+    """
+    Downloads the auto-generated English subtitles for a YouTube video.
+    Args:
+        video_id (str): The YouTube video ID.
+        output_file (str): The file path to save the subtitles.
+    """
     video_url = f"https://www.youtube.com/watch?v={video_id}"
     os.system(f'yt-dlp --write-auto-sub --sub-lang en --skip-download -o "{output_file}" "{video_url}"')
 
@@ -24,21 +30,6 @@ def get_video_metadata(video_url):
             "tags": info.get("tags"),
             "webpage_url": info.get("webpage_url")
         }
-
-
-def get_list_from_channel(channel_id):
-    channel_url = f"https://www.youtube.com/channel/{channel_id}/videos"
-
-    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
-        info = ydl.extract_info(channel_url, download=False)
-        return [{
-            "title": video.get("title"),
-            "id": video.get("id"),
-            "upload_date": video.get("upload_date"),
-            "duration": video.get("duration"),
-            "view_count": video.get("view_count"),
-            "webpage_url": video.get("webpage_url")
-        } for video in info.get("entries", [])]
 
 
 def get_channel_video_list(channel_url, limit=10):
