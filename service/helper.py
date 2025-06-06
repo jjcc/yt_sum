@@ -5,7 +5,7 @@ import re
 
 
 
-def clean_vtt_to_script(vtt_file_path):
+def clean_vtt_to_script(vtt_file_path_or_content, is_file_path=True):
     """
     Converts a VTT (WebVTT subtitle) file to a cleaned script text.
     Reads the specified VTT file, removes timestamps, numbering, empty lines, 
@@ -13,11 +13,14 @@ def clean_vtt_to_script(vtt_file_path):
     remaining lines into a single string, removes extra spaces before punctuation, and strips out any HTML tags.
 
     Args:
-        vtt_file_path (str or Path): The path to the VTT file to be processed.
+        vtt_file_path_or_content (str or Path): The path to the VTT file or the content to be processed.
     Returns:
         str: The cleaned script text extracted from the VTT file.
     """
-    lines = Path(vtt_file_path).read_text(encoding='utf-8').splitlines()
+    if is_file_path:
+        lines = Path(vtt_file_path_or_content).read_text(encoding='utf-8').splitlines()
+    else:
+        lines = vtt_file_path_or_content.splitlines()
     cleaned_lines = []
     previous_line = ""
 

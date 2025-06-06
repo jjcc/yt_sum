@@ -80,7 +80,7 @@ def get_all_transcripts(get_video_transcript, row, index):
     # convert
     with open(output_file, "r", encoding="utf-8") as f:
         vtt_content = f.read()
-    cleaned = clean_vtt_to_script(vtt_content)
+    cleaned = clean_vtt_to_script(vtt_content, is_file_path=False)
     with open(f"output/cleaned/{udate}.txt", "w", encoding="utf-8") as f:
         f.write(cleaned)
     print(f"{index}:Transcript for video {VIDEO_ID} downloaded to {output_file}")
