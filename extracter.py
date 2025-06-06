@@ -59,7 +59,7 @@ def extract_stocks_from_transcript(transcript_text, llm_model="gpt-4.1-mini"):
         {transcript_text}
     """
 
-    if llm_model != "o4-mini":
+    if llm_model == "o4-mini":
         response = client.chat.completions.create(
             model=llm_model,
             messages=[
