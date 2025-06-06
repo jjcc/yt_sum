@@ -98,12 +98,3 @@ if __name__ == "__main__":
     with open(f"output/extracted/{video_id}_{model}.json", "w", encoding="utf-8") as f:
         json.dump(output_dict, f, indent=2, ensure_ascii=False)
 
-
-    #import pandas as pd
-    #
-    #try:
-    #    data = json.loads(output)
-    #    df = pd.DataFrame(data)
-    #    display(df)
-    #except Exception as e:
-    #    print("Failed to parse JSON:", e)
