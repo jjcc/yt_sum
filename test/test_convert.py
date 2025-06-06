@@ -5,6 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 from service.helper import clean_vtt_to_script
+import pandas as pd
 
 
 
@@ -22,3 +23,9 @@ class TestConvert(unittest.TestCase):
 
         print(cleaned2[:1000])  # Preview first 1000 chars
         pass
+    
+    def test_shorten(self):
+        df = pd.read_csv("output/video_metadata.csv", encoding='utf-8-sig')
+        df['description'] = df['description'].apply(lambda x: x[71:160] if isinstance(x, str) else "")
+        df.drop(columns=['tags'], inplace=True, errors='ignore')
+        df.to_csv("output/video_metadata_short.csv", index=False, encoding='utf-8-sig')
