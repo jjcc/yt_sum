@@ -16,9 +16,9 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=API_KEY)  
-models = client.models.list()
-for m in models.data:
-    print(m.id)
+#models = client.models.list()
+#for m in models.data:
+#    print(m.id)
 
 def extract_stocks_from_transcript(transcript_text, llm_model="gpt-4.1-mini"):
     '''
@@ -83,18 +83,23 @@ def extract_stocks_from_transcript(transcript_text, llm_model="gpt-4.1-mini"):
 
 if __name__ == "__main__":
     import json
-    video_id = "20250605"
-    #model = "gpt-4.1-mini"  # Change to your preferred model rank #1
+    model = "gpt-4.1-mini"  # Change to your preferred model rank #1
     #model = "gpt-4o-mini"  # Change to your preferred model rank #2
     #model = "gpt-4o"  # Change to your preferred model rank unknown
-    model = "o4-mini"  # Change to your preferred model , rank #3
-    with open(f"output/cleaned/{video_id}.txt", "r", encoding="utf-8") as f:
-        transcript = f.read().strip()
-    output = extract_stocks_from_transcript(transcript, llm_model=model)
-    print(output)
-    output = output.replace("```json", "").replace("```", "").strip()
-    output_dict = json.loads(output)
+    #model = "o4-mini"  # Change to your preferred model , rank #3
+    for file in os.listdir("output/cleaned"):
+        if file.endswith(".txt"):
+            video_id = file.split(".")[0]
+            with open(f"output/cleaned/{file}", "r", encoding="utf-8") as f:
+                transcript = f.read().strip()
+            #video_id = "20250605"
+            #with open(f"output/cleaned/{video_id}.txt", "r", encoding="utf-8") as f:
+            #    transcript = f.read().strip()
+            output = extract_stocks_from_transcript(transcript, llm_model=model)
+            print(output)
+            output = output.replace("```json", "").replace("```", "").strip()
+            output_dict = json.loads(output)
 
-    with open(f"output/extracted/{video_id}_{model}.json", "w", encoding="utf-8") as f:
-        json.dump(output_dict, f, indent=2, ensure_ascii=False)
+            with open(f"output/extracted/{video_id}_{model}.json", "w", encoding="utf-8") as f:
+                json.dump(output_dict, f, indent=2, ensure_ascii=False)
 
