@@ -131,15 +131,17 @@ def get_return_by_sticker(ticker, date_mentioned, df_stock_info, ndays_list):
     date_as_index = date_mentioned_as_date.strftime('%Y-%m-%d')
     if df_stock_info is not None and date_as_index in df_stock_info.index:
         price_on_mentioned_date = df_stock_info.loc[date_as_index, 'close']
-        print(f"Price of {ticker} on {date_mentioned_as_date.strftime('%Y-%m-%d')} is {price_on_mentioned_date}")
+        #print(f"Price of {ticker} on {date_mentioned_as_date.strftime('%Y-%m-%d')} is {price_on_mentioned_date}")
         mentioned = (date_as_index, 0, price_on_mentioned_date)
+        next_date = date_mentioned_as_date
     else:
         # try the next date and so on until we find a date that exists in the index
         date_as_index, next_date, extra_days = get_next_validate_date(df_stock_info, date_mentioned_as_date)
         price_on_next_date = df_stock_info.loc[date_as_index, 'Close']
-        print(f"Price of {ticker}, mentioned at {date_mentioned} on {next_date.strftime('%Y-%m-%d')} is {price_on_next_date}, extra days: {extra_days}")
+        #print(f"Price of {ticker}, mentioned at {date_mentioned} on {next_date.strftime('%Y-%m-%d')} is {price_on_next_date}, extra days: {extra_days}")
         mentioned = (date_as_index, extra_days, price_on_next_date)
 
+    # calculate the prices for the next ndays_list
     price_list, extra_day_list = get_prices_by_daylist(ticker, df_stock_info, next_date, ndays_list)
 
     return mentioned, price_list, extra_day_list
@@ -171,7 +173,7 @@ def get_prices_by_daylist(ticker, df_stock_info, next_date, ndays_list):
             extra_days_list.append(0)
             print(f"Price for {ticker} on {ndays_later.strftime('%Y-%m-%d')} is not available, skipping.")
         else:
-            print(f"Price of {ticker} , {ndays+extra_days} later on {ndays_later.strftime('%Y-%m-%d')} is {price_ndays_later}")
+            #print(f"Price of {ticker} , {ndays+extra_days} later on {ndays_later.strftime('%Y-%m-%d')} is {price_ndays_later}")
             prices_in_ndays.append(float(price_ndays_later))
             extra_days_list.append(extra_days)
         

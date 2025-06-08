@@ -249,16 +249,13 @@ class TestBacktest(unittest.TestCase):
                     print(f"No stock info found for ticker {ticker}, skipping.")
                     continue
                 break
-        print(df_stock_info.head())
 
         # now we have date mentioned and the ticker
-        # check the price on the date mentioned
-
-        # get the price 2 weeks later
+        # check the price on the date mentioned and ndays later
         ndays_list = [14, 30, 35, 60, 90]  # days to check later
         mentioned , price_list,extra_day_list = get_return_by_sticker(ticker, date_mentioned, df_stock_info, ndays_list)
 
-        print(f"Ticker: {ticker}, Date mentioned: {date_mentioned}, at extraday: {mentioned[1]} days")
+        print(f"Ticker: {ticker}, Date mentioned: {date_mentioned},with price:{mentioned[2]} at extraday: {mentioned[1]} days")
         print(f"With ndays later:{ndays_list}, Price list: {price_list}, extra days: {extra_day_list}")
 
 
