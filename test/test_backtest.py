@@ -260,3 +260,16 @@ class TestBacktest(unittest.TestCase):
 
 
 
+    def test_main1(self):
+        """
+        Main function to run the backtesting process.
+        """
+        from evaluator import main1
+
+        df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
+        later_days = [14, 30, 35, 60, 90]  # days to check later
+        return_info = main1(df_stock_info=df , ndays_list=later_days)
+        with open("data/return_info.json", "w", encoding="utf-8") as f:
+            json.dump(return_info, f, indent=4, ensure_ascii=False)
+        df = pd.DataFrame(return_info)
+        df.to_csv("data/return_info.csv", index=False, encoding='utf-8-sig')

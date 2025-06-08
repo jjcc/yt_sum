@@ -104,9 +104,16 @@ def get_next_validate_date(df_stock_info, date_mentioned_as_date):
     next_date = date_mentioned_as_date + pd.Timedelta(days=1)
     date_as_index = next_date.strftime('%Y-%m-%d')
     while date_as_index not in df_stock_info.index:
-        next_date = next_date + pd.Timedelta(days=1)
+        try:
+           next_date = next_date + pd.Timedelta(days=1)
+        except Exception as e:
+            print(f"Error while getting next date: {e}")
+            return None, None, 0
         date_as_index = next_date.strftime('%Y-%m-%d')
         extra_days += 1
+        if extra_days > 100:
+            print(f"Too many extra days ({extra_days}) for ticker, breaking the loop.")
+            return None, None, 0
     return date_as_index,next_date, extra_days
 
 def get_return_by_sticker(ticker, date_mentioned, df_stock_info, ndays_list):
@@ -130,13 +137,16 @@ def get_return_by_sticker(ticker, date_mentioned, df_stock_info, ndays_list):
     # check if the date is in the index of the stock info DataFrame, if not, go next date
     date_as_index = date_mentioned_as_date.strftime('%Y-%m-%d')
     if df_stock_info is not None and date_as_index in df_stock_info.index:
-        price_on_mentioned_date = df_stock_info.loc[date_as_index, 'close']
+        price_on_mentioned_date = df_stock_info.loc[date_as_index, 'Close']
         #print(f"Price of {ticker} on {date_mentioned_as_date.strftime('%Y-%m-%d')} is {price_on_mentioned_date}")
         mentioned = (date_as_index, 0, price_on_mentioned_date)
         next_date = date_mentioned_as_date
     else:
         # try the next date and so on until we find a date that exists in the index
         date_as_index, next_date, extra_days = get_next_validate_date(df_stock_info, date_mentioned_as_date)
+        if date_as_index is None:
+            print(f"No valid date found for {ticker} after {date_mentioned}, skipping.")
+            return [], [], []
         price_on_next_date = df_stock_info.loc[date_as_index, 'Close']
         #print(f"Price of {ticker}, mentioned at {date_mentioned} on {next_date.strftime('%Y-%m-%d')} is {price_on_next_date}, extra days: {extra_days}")
         mentioned = (date_as_index, extra_days, price_on_next_date)
@@ -167,6 +177,11 @@ def get_prices_by_daylist(ticker, df_stock_info, next_date, ndays_list):
         extra_days = 0
         if ndays_later_as_index not in df_stock_info.index:
             ndays_later_as_index, ndays_later, extra_days = get_next_validate_date(df_stock_info, ndays_later)
+        if ndays_later_as_index is None:
+            print(f"No valid date found for {ticker} after {ndays} days,maybe it's in future day. skipping.")
+            prices_in_ndays.append(None)
+            extra_days_list.append(0)
+            continue
         price_ndays_later = df_stock_info.loc[ndays_later_as_index, 'Close']
         if price_ndays_later is pd.NA or pd.isna(price_ndays_later):
             prices_in_ndays.append(None)
@@ -178,4 +193,65 @@ def get_prices_by_daylist(ticker, df_stock_info, next_date, ndays_list):
             extra_days_list.append(extra_days)
         
     return prices_in_ndays, extra_days_list
+
+        
+def main1(df_stock_info, ndays_list):
+    """
+    Check the return of a stock in the backtesting process.
+    """
+    return_info = []
+
+    for idx, row in df_stock_info.iterrows():
+        stock_code = row['stock_code']
+        if pd.isna(stock_code) or stock_code == "N/A":
+            print(f"Row {idx} has no stock code, skipping.")
+            continue
+        if not isinstance(stock_code, str):
+            print(f"Row {idx} has invalid stock code type: {type(stock_code)}, skipping.")
+            continue
+        ticker = stock_code.strip().upper()
+        date_mentioned = row['date']
+        if ' ' in ticker or ticker == '':
+            print(f"Row {idx} has invalid ticker: {ticker}, skipping.")
+            continue
+
+        # check if the ticker is missing in retrieve stock info
+        is_in_missing_list = check_missing(ticker)
+        if is_in_missing_list:
+            print(f"Ticker {ticker} is in the missing stock codes list, skipping.")
+            continue
+        else:
+            # get the stock info by ticker
+            df_stock_info = get_stock_info_by_ticker(ticker)
+            if df_stock_info is None:
+                print(f"No stock info found for ticker {ticker}, skipping.")
+                continue
+
+            # now we have date mentioned and the ticker
+            # check the price on the date mentioned and ndays later
+            mentioned , price_list,extra_day_list = get_return_by_sticker(ticker, date_mentioned, df_stock_info, ndays_list)
+            if len(mentioned) == 0:
+                print(f"No valid data found for ticker {ticker} on date {date_mentioned}, skipping.")
+                continue
+            return_info.append(
+                {"ticker":ticker,
+                'date_mentioned': mentioned[0],
+                'extra_days': mentioned[1],
+                'price_on_mentioned': mentioned[2],
+                'ndays_list': ndays_list,
+                'price_list': price_list,
+                'extra_day_list': extra_day_list
+            })
+
+        
+            print(f">>row{idx},1.Ticker: {ticker}, Date mentioned: {date_mentioned},with price:{mentioned[2]} at extraday: {mentioned[1]} days")
+            print(f">>row{idx},2.With ndays later:{ndays_list}, Price list: {price_list}, extra days: {extra_day_list}")
+    # save the return info to a json file
+    return return_info
+
+if __name__ == "__main__":
+    
+    df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
+    later_days = [14, 30, 35, 60, 90]  # days to check later
+    main1(df_stock_info=df , ndays_list=later_days)
 
