@@ -1,10 +1,10 @@
 # create a unit test
 import json
+import ast
 import unittest
 import pandas as pd
 from dotenv import load_dotenv
-from evaluator import get_stock_info
-import ast
+from evaluator import check_missing, get_return_by_sticker, get_stock_info, get_stock_info_by_ticker
 
 
 class TestBacktest(unittest.TestCase):
@@ -217,4 +217,49 @@ class TestBacktest(unittest.TestCase):
             json.dump(left, f, ensure_ascii=False, indent=4)
 
         
+    def test_check_a_stock_return(self):
+        """
+        Check the return of a stock in the backtesting process.
+        """
+        df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
+
+        for idx, row in df.iterrows():
+            stock_code = row['stock_code']
+            if pd.isna(stock_code) or stock_code == "N/A":
+                print(f"Row {idx} has no stock code, skipping.")
+                continue
+            if not isinstance(stock_code, str):
+                print(f"Row {idx} has invalid stock code type: {type(stock_code)}, skipping.")
+                continue
+            ticker = stock_code.strip().upper()
+            date_mentioned = row['date']
+            if ' ' in ticker or ticker == '':
+                print(f"Row {idx} has invalid ticker: {ticker}, skipping.")
+                continue
+
+            # check if the ticker is missing in retrieve stock info
+            is_in_missing_list = check_missing(ticker)
+            if is_in_missing_list:
+                print(f"Ticker {ticker} is in the missing stock codes list, skipping.")
+                continue
+            else:
+                # get the stock info by ticker
+                df_stock_info = get_stock_info_by_ticker(ticker)
+                if df_stock_info is None:
+                    print(f"No stock info found for ticker {ticker}, skipping.")
+                    continue
+                break
+        print(df_stock_info.head())
+
+        # now we have date mentioned and the ticker
+        # check the price on the date mentioned
+
+        # get the price 2 weeks later
+        ndays_list = [14, 30, 35, 60, 90]  # days to check later
+        mentioned , price_list,extra_day_list = get_return_by_sticker(ticker, date_mentioned, df_stock_info, ndays_list)
+
+        print(f"Ticker: {ticker}, Date mentioned: {date_mentioned}, at extraday: {mentioned[1]} days")
+        print(f"With ndays later:{ndays_list}, Price list: {price_list}, extra days: {extra_day_list}")
+
+
 
