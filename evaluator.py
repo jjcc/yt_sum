@@ -1,6 +1,7 @@
 import ast
 import json
 from datetime import datetime
+import os
 import yfinance as yf
 import pandas as pd
 
@@ -248,10 +249,7 @@ def main1(df_stock_info, ndays_list):
                 'price_list': price_list,
                 'extra_day_list': extra_day_list
             })
-
         
-            print(f">>row{idx},1.Ticker: {ticker}, Date mentioned: {date_mentioned},with price:{mentioned[2]} at extraday: {mentioned[1]} days")
-            print(f">>row{idx},2.With ndays later:{ndays_list}, Price list: {price_list}, extra days: {extra_day_list}")
     # save the return info to a json file
     return return_info
 
@@ -274,7 +272,8 @@ def main2(return_info, output_file):
 
 
     #extra_col_length = max(df['ndays_list'].apply(len))
-    later_days = [7, 14, 30, 45, 60, 90]
+    days_list = os.getenv("DAYS_LIST")
+    later_days =  ast.literal_eval(days_list) if days_list else None
     extra_col_length = len(later_days) 
     for i in range(extra_col_length):
         df[f'nday_{later_days[i]}_r'] = df['return_list'].apply(lambda x: x[i] if i < len(x) else None)
@@ -289,7 +288,8 @@ if __name__ == "__main__":
     if case == 1:
        # 1. collect data part
        df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
-       later_days = [7, 14, 30, 45, 60, 90]  # days to check later
+       days_list = os.getenv("DAYS_LIST")
+       later_days =  ast.literal_eval(days_list) if days_list else None
        return_info = main1(df_stock_info=df , ndays_list=later_days)
        df = pd.DataFrame(return_info)
        df.to_csv("data/return_info.csv", index=False, encoding='utf-8-sig')

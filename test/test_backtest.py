@@ -4,6 +4,7 @@ import ast
 import unittest
 import pandas as pd
 from dotenv import load_dotenv
+import os
 from evaluator import check_missing, get_return_by_sticker, get_stock_info, get_stock_info_by_ticker, main2
 
 
@@ -267,7 +268,8 @@ class TestBacktest(unittest.TestCase):
         from evaluator import main1
 
         df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
-        later_days = [7, 14, 30, 45, 60, 90]# days to check later
+        days_list = os.getenv("DAYS_LIST")
+        later_days =  ast.literal_eval(days_list) if days_list else None
         return_info = main1(df_stock_info=df , ndays_list=later_days)
         with open("data/return_info.json", "w", encoding="utf-8") as f:
             json.dump(return_info, f, indent=4, ensure_ascii=False)
