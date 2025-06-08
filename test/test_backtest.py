@@ -267,7 +267,7 @@ class TestBacktest(unittest.TestCase):
         from evaluator import main1
 
         df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
-        later_days = [14, 30, 35, 60, 90]  # days to check later
+        later_days = [7, 14, 30, 45, 60, 90]# days to check later
         return_info = main1(df_stock_info=df , ndays_list=later_days)
         with open("data/return_info.json", "w", encoding="utf-8") as f:
             json.dump(return_info, f, indent=4, ensure_ascii=False)

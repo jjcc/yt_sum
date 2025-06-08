@@ -215,6 +215,11 @@ def main1(df_stock_info, ndays_list):
         if ' ' in ticker or ticker == '':
             print(f"Row {idx} has invalid ticker: {ticker}, skipping.")
             continue
+        # remove negative opinion from ticker
+        opinion = row.get('opinion', '')
+        if opinion and 'negative' in opinion.lower():
+            print(f"Row {idx} has negative opinion for ticker {ticker}, skipping.")
+            continue
 
         # check if the ticker is missing in retrieve stock info
         is_in_missing_list = check_missing(ticker)
@@ -259,11 +264,20 @@ def main2(return_info, output_file):
     """
     df = return_info.copy()
     df['price_list'] = df['price_list'].apply(ast.literal_eval)
-    df['return_list'] = df['price_list'].apply(lambda x: [round((x[i] - x[0]) / x[0] * 100, 2) if (x[i] and x[0] and x[0] != 0) else None for i in range(len(x))])
+    df['return_list'] = df.apply(
+    lambda row: [
+        round((p - row['price_on_mentioned']) / row['price_on_mentioned'] * 100, 2)
+        if p is not None and row['price_on_mentioned'] not in (None, 0)
+        else None
+        for p in row['price_list']
+    ],axis=1)
 
-    extra_col_length = max(df['ndays_list'].apply(len))
+
+    #extra_col_length = max(df['ndays_list'].apply(len))
+    later_days = [7, 14, 30, 45, 60, 90]
+    extra_col_length = len(later_days) 
     for i in range(extra_col_length):
-        df[f'nday_{i+1}_r'] = df['return_list'].apply(lambda x: x[i] if i < len(x) else None)
+        df[f'nday_{later_days[i]}_r'] = df['return_list'].apply(lambda x: x[i] if i < len(x) else None)
 
 
     with open(output_file, "w", encoding="utf-8") as f:
@@ -271,16 +285,17 @@ def main2(return_info, output_file):
     print(f"Return info saved to {output_file}")
 
 if __name__ == "__main__":
-    
-    # 1. collect data part
-    #df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
-    #later_days = [14, 30, 35, 60, 90]  # days to check later
-    #return_info = main1(df_stock_info=df , ndays_list=later_days)
-    #df = pd.DataFrame(return_info)
-    #df.to_csv("data/return_info.csv", index=False, encoding='utf-8-sig')
-
-    # 2. analyze the data part
-    df = pd.read_csv("data/return_info.csv", encoding='utf-8-sig')
-    main2(df, output_file="data2/return_info2.json")
+    case = 1  # Set the case number to run the desired part of the evaluator
+    if case == 1:
+       # 1. collect data part
+       df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
+       later_days = [7, 14, 30, 45, 60, 90]  # days to check later
+       return_info = main1(df_stock_info=df , ndays_list=later_days)
+       df = pd.DataFrame(return_info)
+       df.to_csv("data/return_info.csv", index=False, encoding='utf-8-sig')
+    elif case == 2:
+        # 2. analyze the data part
+        df = pd.read_csv("data/return_info.csv", encoding='utf-8-sig')
+        main2(df, output_file="data2/return_info2.json")
 
 
