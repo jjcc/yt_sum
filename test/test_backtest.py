@@ -52,6 +52,7 @@ class TestBacktest(unittest.TestCase):
         """
         Check for missing stock codes in the extracted data.
         """
+        group_to_check = None # 7  # specify the group to check
         with open("data/missing_stock_codes_by_log.json", "r", encoding="utf-8") as f:
             missing_by_group_log = json.load(f)
         with open("data/reverse_lut.json", "r", encoding="utf-8") as f:
@@ -66,6 +67,8 @@ class TestBacktest(unittest.TestCase):
         missing_stock_codes_by_group = {}
         for group, stock_codes in stock_list_by_group.items():
             print(f"Group: {group}, Stock Codes: {len(stock_codes)}")
+            if group_to_check and group != group_to_check:
+                continue
 
             # read the CSV file for the group
             date_str = "2025_06_08_00_47_58"  # example date, adjust as needed
@@ -78,7 +81,10 @@ class TestBacktest(unittest.TestCase):
                 stock_prices = df.xs(key=code, level=1, axis=1)
                 # the first row of the stock prices
                 values0 = stock_prices.iloc[0]
-                if values0.isna().all():
+                values1 = stock_prices.iloc[2]
+                values2 = stock_prices.iloc[3]
+
+                if values0.isna().all() and values1.isna().all() and values2.isna().all():
                     #print(f"Stock code {code} has all NaN values in the first row.")
                     if group not in missing_stock_codes_by_group:
                         missing_stock_codes_by_group[group] = []
@@ -90,6 +96,7 @@ class TestBacktest(unittest.TestCase):
             print(f"CSV Stock Codes: {len(csv_stock_codes)}")
 
         print("Missing Stock Codes by Group:")
+        missing_by_group = {}
         for group, missing_codes in missing_stock_codes_by_group.items():
             #csv_stock_codes = [code.replace('.XSHG', '').replace('.XSHE', '') for code in csv_stock_codes if code.startswith(('6', '0'))]
             #missing_stock_codes = set(stock_codes) - set(csv_stock_codes)
@@ -103,7 +110,27 @@ class TestBacktest(unittest.TestCase):
             print(f"Group: {group}, Missing    now:{count_now}, code: {missing_codes}")
             if count_now - count_in_log != 0:
                 print(f"###Group: {group}, Count in log: {count_in_log}, Count now: {count_now}")
+            missing_by_group[group] = {
+                "count": count_now,
+                "missing_codes": missing_codes,
+            }
+        with open("data/missing_stock_codes_from_dnld.json", "w", encoding="utf-8") as f:
+            json.dump(missing_by_group, f, ensure_ascii=False, indent=4)
 
+    def test_download_missing(self):
+        """
+        Test the backtesting process by extracting stock codes and dates from a CSV file,
+        """
+        df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
+        df = df[df['stock_code'].notna()]
+        df = df[df['date'] > 20240406]
+        df = df[df['date'] < 20250521]  # filter 
+        df = df[df['stock_code'] != "N/A"]  # filter out rows with 'N/A' in 'stock_code' 
+        group = 7
+        # now get all the stock codes 
+        stock_codes = df['stock_code'].unique().tolist()
+        reverse_lut = get_stock_info(stock_codes, start_date='2024-04-06', end_date='2025-05-21',missing_group=group)
+        print("processed missing group:", group)
 
 
 
