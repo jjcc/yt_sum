@@ -1,3 +1,4 @@
+import ast
 import json
 from datetime import datetime
 import yfinance as yf
@@ -249,9 +250,37 @@ def main1(df_stock_info, ndays_list):
     # save the return info to a json file
     return return_info
 
+def main2(return_info, output_file):
+    """
+    Save the return info to a JSON file.
+    Args:
+        return_info (list): The list of return info to save.
+        output_file (str): The file path to save the return info.
+    """
+    df = return_info.copy()
+    df['price_list'] = df['price_list'].apply(ast.literal_eval)
+    df['return_list'] = df['price_list'].apply(lambda x: [round((x[i] - x[0]) / x[0] * 100, 2) if (x[i] and x[0] and x[0] != 0) else None for i in range(len(x))])
+
+    extra_col_length = max(df['ndays_list'].apply(len))
+    for i in range(extra_col_length):
+        df[f'nday_{i+1}_r'] = df['return_list'].apply(lambda x: x[i] if i < len(x) else None)
+
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        df.to_csv(f, index=False, encoding='utf-8-sig')
+    print(f"Return info saved to {output_file}")
+
 if __name__ == "__main__":
     
-    df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
-    later_days = [14, 30, 35, 60, 90]  # days to check later
-    main1(df_stock_info=df , ndays_list=later_days)
+    # 1. collect data part
+    #df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
+    #later_days = [14, 30, 35, 60, 90]  # days to check later
+    #return_info = main1(df_stock_info=df , ndays_list=later_days)
+    #df = pd.DataFrame(return_info)
+    #df.to_csv("data/return_info.csv", index=False, encoding='utf-8-sig')
+
+    # 2. analyze the data part
+    df = pd.read_csv("data/return_info.csv", encoding='utf-8-sig')
+    main2(df, output_file="data2/return_info2.json")
+
 

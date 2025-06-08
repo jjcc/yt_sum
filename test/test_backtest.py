@@ -4,7 +4,7 @@ import ast
 import unittest
 import pandas as pd
 from dotenv import load_dotenv
-from evaluator import check_missing, get_return_by_sticker, get_stock_info, get_stock_info_by_ticker
+from evaluator import check_missing, get_return_by_sticker, get_stock_info, get_stock_info_by_ticker, main2
 
 
 class TestBacktest(unittest.TestCase):
@@ -273,3 +273,7 @@ class TestBacktest(unittest.TestCase):
             json.dump(return_info, f, indent=4, ensure_ascii=False)
         df = pd.DataFrame(return_info)
         df.to_csv("data/return_info.csv", index=False, encoding='utf-8-sig')
+
+    def test_main2(self):
+        df = pd.read_csv("data/return_info.csv", encoding='utf-8-sig')
+        main2(df, output_file="data/return_info_ex.csv")
