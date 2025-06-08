@@ -21,6 +21,7 @@ class TestBacktest(unittest.TestCase):
         with open("data/missing_download.txt", "r", encoding="utf-8-sig") as f:
             content = f.read().strip()
             missing_stock_codes_log = content.split("\n\n")
+        missing_by_group = {}
         for idx, log in enumerate(missing_stock_codes_log):
             assert log.startswith("Processing "), "Missing stock codes should start with 'Processing '"
             lines = log.split("\n")
@@ -37,11 +38,22 @@ class TestBacktest(unittest.TestCase):
                 listall = list1
             print(f"Log {idx + 1}: {count} missing stock codes, {listall}")
 
+            missing_list =  ast.literal_eval(listall)
+            missing_by_group[idx] = {
+                "count": int(count),
+                "stock_codes": missing_list,
+                "list": listall
+            }
+        with open(f"data/missing_stock_codes_by_log.json", "w", encoding="utf-8") as f:
+            json.dump(missing_by_group, f, ensure_ascii=False, indent=4)
+
 
     def test_check_missing_stock_codes(self):
         """
         Check for missing stock codes in the extracted data.
         """
+        with open("data/missing_stock_codes_by_log.json", "r", encoding="utf-8") as f:
+            missing_by_group_log = json.load(f)
         with open("data/reverse_lut.json", "r", encoding="utf-8") as f:
             reverse_lut = json.load(f)
         # build a mapping with group as key and stock codes list as values
@@ -71,7 +83,6 @@ class TestBacktest(unittest.TestCase):
                     if group not in missing_stock_codes_by_group:
                         missing_stock_codes_by_group[group] = []
                     missing_stock_codes_by_group[group].append(code)
-                       
 
 
 
@@ -80,10 +91,18 @@ class TestBacktest(unittest.TestCase):
 
         print("Missing Stock Codes by Group:")
         for group, missing_codes in missing_stock_codes_by_group.items():
-            print(f"Group: {group}, Missing Stock Codes: {missing_codes}")
             #csv_stock_codes = [code.replace('.XSHG', '').replace('.XSHE', '') for code in csv_stock_codes if code.startswith(('6', '0'))]
             #missing_stock_codes = set(stock_codes) - set(csv_stock_codes)
 
+            missing_from_log = missing_by_group_log.get(str(group), {})           
+            count_in_log = missing_from_log.get("count", 0)
+            count_now = len(missing_codes)
+            missed_in_log = missing_from_log.get("list")
+
+            print(f"Group: {group}, Missing in log:{count_in_log}, code: {missed_in_log}")
+            print(f"Group: {group}, Missing    now:{count_now}, code: {missing_codes}")
+            if count_now - count_in_log != 0:
+                print(f"###Group: {group}, Count in log: {count_in_log}, Count now: {count_now}")
 
 
 
