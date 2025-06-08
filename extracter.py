@@ -5,10 +5,8 @@ This script extracts stock opinions from YouTube video transcripts using OpenAI'
 It uses yt-dlp to download the transcript, processes it with OpenAI's API, and formats the 
 output as JSON.
 '''
-
-
-
 import os
+import json
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -81,12 +79,10 @@ def extract_stocks_from_transcript(transcript_text, llm_model="gpt-4.1-mini"):
     )
     return response.choices[0].message.content
 
-if __name__ == "__main__":
-    import json
-    model = "gpt-4.1-mini"  # Change to your preferred model rank #1
-    #model = "gpt-4o-mini"  # Change to your preferred model rank #2
-    #model = "gpt-4o"  # Change to your preferred model rank unknown
-    #model = "o4-mini"  # Change to your preferred model , rank #3
+def main(extract_function, model):
+    """
+    Main function to extract stock opinions from YouTube transcripts.
+    """
     for file in os.listdir("output/cleaned"):
         if file.endswith(".txt"):
             video_id = file.split(".")[0]
@@ -95,11 +91,18 @@ if __name__ == "__main__":
             #video_id = "20250605"
             #with open(f"output/cleaned/{video_id}.txt", "r", encoding="utf-8") as f:
             #    transcript = f.read().strip()
-            output = extract_stocks_from_transcript(transcript, llm_model=model)
+            output = extract_function(transcript, llm_model=model)
             print(output)
             output = output.replace("```json", "").replace("```", "").strip()
             output_dict = json.loads(output)
 
             with open(f"output/extracted/{video_id}_{model}.json", "w", encoding="utf-8") as f:
                 json.dump(output_dict, f, indent=2, ensure_ascii=False)
+
+if __name__ == "__main__":
+    model = "gpt-4.1-mini"  #  rank #1
+    #model = "gpt-4o-mini"  # rank #2
+    #model = "gpt-4o"  #  rank unknown
+    #model = "o4-mini"  #  rank #3
+    main(extract_stocks_from_transcript, model)
 

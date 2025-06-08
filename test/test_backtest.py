@@ -1,62 +1,10 @@
 # create a unit test
 import json
-from datetime import datetime
 import unittest
 import pandas as pd
-import yfinance as yf
 from dotenv import load_dotenv
-
-
-
-def get_stock_info(stock_code_list, start_date=None, end_date=None):
-    """
-    use yfinance to get the stock information for a list of stock codes.
-    Args:
-        stock_code_list (list): A list of stock codes.
-    Returns:
-        dict: A dictionary with stock codes as keys and their information as values.
-    """
-    # spliet the stock_code_list into chunks of 20
-    chunk_size = 20
-    stock_code_list_ll = [stock_code_list[i:i + chunk_size] for i in range(0, len(stock_code_list), chunk_size)]
-    # build a mapping for chuck and stock codes
-    stock_code_map = {int(i/chunk_size): stock_code_list[i:i + chunk_size] for i in range(0, len(stock_code_list), chunk_size)}
-    # build a reverse mapping for stock codes
-    reverse_stock_code_map = {stock_code: i for i, stock_code_list in stock_code_map.items() for stock_code in stock_code_list}
-    today = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-    if len(stock_code_list) > chunk_size:  
-        # to chunk_size for yfinance API
-        print(f"Limiting stock_code_list to {chunk_size} for yfinance API") 
-        stock_code_list_ll = [stock_code_list[i:i + 20] for i in range(0, len(stock_code_list), 20)]
-        print(f"Splitting stock codes into {len(stock_code_list_ll)} chunks of 20")
-        interval = '1d'  # Set the interval for yfinance API
-        for idx, stock_code_list in enumerate(stock_code_list_ll):
-            print(f"Processing chunk of stock codes: {stock_code_list}")
-            df_ml = yf.download(stock_code_list, 
-                        start=start_date, 
-                        end=end_date, 
-                        interval=interval, 
-                        rounding=True)
-            df_ml.to_csv(f"data/downloaded/stock_group{idx}_{today}.csv", encoding='utf-8-sig')
-            if idx == 3:
-                print("pause after 4 chunks for testing purposes.")
-                pass
-    return reverse_stock_code_map
-    # Uncomment the following lines if you want to use yfinance to get stock data
-
-
-    #import yfinance as yf
-    #stock_info = {}
-    #df = yf.download(
-    #    tickers=stock_code_list,
-    #    start=start_date,
-    #    end=end_date,
-    #    group_by='ticker',
-    #    auto_adjust=True,
-    #    threads=True,
-    #    progress=False
-    #)
-    #for stock_code in stock_code_list:
+from evaluator import get_stock_info
+import ast
 
 
 class TestBacktest(unittest.TestCase):
@@ -66,7 +14,87 @@ class TestBacktest(unittest.TestCase):
     def setUp(self):
         load_dotenv()
 
+    def test_check_missing_stock_codes_by_log(self):
+        """
+        Check for missing stock codes by logging the stock codes in the extracted data.
+        """
+        with open("data/missing_download.txt", "r", encoding="utf-8-sig") as f:
+            content = f.read().strip()
+            missing_stock_codes_log = content.split("\n\n")
+        for idx, log in enumerate(missing_stock_codes_log):
+            assert log.startswith("Processing "), "Missing stock codes should start with 'Processing '"
+            lines = log.split("\n")
+            stock_list = lines[0].split("codes:")[1].strip()
+            #stock_list = json.loads(stock_list)
+            stock_list =  ast.literal_eval(stock_list)
+            count = lines[1].split(" ")[0]
+            assert count.isdigit(), "The count of missing stock codes should be a number"
+            list1 = lines[2].split(":")[0]
+            if len(lines) > 3:
+                list2 = lines[3].split(":")[0]
+                listall = list1.replace("]",",") +  list2.replace("[","")
+            else:
+                listall = list1
+            print(f"Log {idx + 1}: {count} missing stock codes, {listall}")
+
+
+    def test_check_missing_stock_codes(self):
+        """
+        Check for missing stock codes in the extracted data.
+        """
+        with open("data/reverse_lut.json", "r", encoding="utf-8") as f:
+            reverse_lut = json.load(f)
+        # build a mapping with group as key and stock codes list as values
+        stock_list_by_group = {}
+        for stock_code, group in reverse_lut.items():
+            if group not in stock_list_by_group:
+                stock_list_by_group[group] = []
+            stock_list_by_group[group].append(stock_code)
+
+        missing_stock_codes_by_group = {}
+        for group, stock_codes in stock_list_by_group.items():
+            print(f"Group: {group}, Stock Codes: {len(stock_codes)}")
+
+            # read the CSV file for the group
+            date_str = "2025_06_08_00_47_58"  # example date, adjust as needed
+            # df = pd.read_csv("your_file.csv", header=[0, 1], index_col=0)
+            df = pd.read_csv(f"data/downloaded/stock_group{group}_{date_str}.csv", header=[0,1], index_col=0, encoding='utf-8-sig')
+            # check if the stock codes in the CSV file match the stock codes in the group
+            csv_stock_codes = df.columns.levels[1].tolist()
+            for idx, code in enumerate(csv_stock_codes):
+
+                stock_prices = df.xs(key=code, level=1, axis=1)
+                # the first row of the stock prices
+                values0 = stock_prices.iloc[0]
+                if values0.isna().all():
+                    #print(f"Stock code {code} has all NaN values in the first row.")
+                    if group not in missing_stock_codes_by_group:
+                        missing_stock_codes_by_group[group] = []
+                    missing_stock_codes_by_group[group].append(code)
+                       
+
+
+
+
+            print(f"CSV Stock Codes: {len(csv_stock_codes)}")
+
+        print("Missing Stock Codes by Group:")
+        for group, missing_codes in missing_stock_codes_by_group.items():
+            print(f"Group: {group}, Missing Stock Codes: {missing_codes}")
+            #csv_stock_codes = [code.replace('.XSHG', '').replace('.XSHE', '') for code in csv_stock_codes if code.startswith(('6', '0'))]
+            #missing_stock_codes = set(stock_codes) - set(csv_stock_codes)
+
+
+
+
+
+
+
+
     def test_backtest(self):
+        """
+        Test the backtesting process by extracting stock codes and dates from a CSV file,
+        """
         df = pd.read_csv("output/extracted_all_filled2.csv", encoding='utf-8-sig')
         # filter the rows with no 'stock_code'
         df = df[df['stock_code'].notna()]
