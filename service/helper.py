@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from time import sleep
 import yt_dlp
+from twilio.rest import Client
 
 
 def clean_vtt_to_script(vtt_file_path_or_content, is_file_path=True):
@@ -116,8 +117,22 @@ def get_all_transcripts(get_video_transcript, row, index):
     #udate = row['upload_date'].values[0]  # Get upload date
     udate = row.upload_date # Get upload date
     print(f"Video ID: {VIDEO_ID}, Upload Date: {udate}")
+
+    output_file, clear_text_file = extracxt_n_clean_transcript(VIDEO_ID, udate)
+    print(f"{index}:Transcript for video {VIDEO_ID} downloaded to {output_file}")
+
+def extracxt_n_clean_transcript(VIDEO_ID, udate):
+    """
+    Extracts and cleans the transcript for a given YouTube video ID.
+    Args:
+        
+        VIDEO_ID (str): The YouTube video ID.
+        udate (str): The upload date of the video in YYYYMMDD format.
+        Returns:
+        output_file(str): The path to the cleaned transcript file.
+    """
     output_dir = "output"
-    output_file_noext = f"{output_dir}/transcript/{udate}"
+    output_file_noext = f"{output_dir}/transcript/{udate}_{VIDEO_ID}"
     output_file = f"{output_file_noext}.en.vtt"
     os.makedirs(output_dir, exist_ok=True)
     get_video_transcript(VIDEO_ID, output_file_noext)
@@ -126,6 +141,51 @@ def get_all_transcripts(get_video_transcript, row, index):
     with open(output_file, "r", encoding="utf-8") as f:
         vtt_content = f.read()
     cleaned = clean_vtt_to_script(vtt_content, is_file_path=False)
-    with open(f"output/cleaned/{udate}.txt", "w", encoding="utf-8") as f:
+    clear_text_file = f"output/cleaned/{udate}_{VIDEO_ID}.txt"
+    with open(clear_text_file, "w", encoding="utf-8") as f:
         f.write(cleaned)
-    print(f"{index}:Transcript for video {VIDEO_ID} downloaded to {output_file}")
+    return output_file, clear_text_file
+
+
+def get_a_transcript(video_id):
+    """
+    Downloads the auto-generated English subtitles for a YouTube video.
+    Args:
+        video_id (str): The YouTube video ID.
+        output_file (str): The file path to save the subtitles.
+    Notes:
+        - This function is passed to `get_all_transcripts` to download subtitles for each video.
+        - The subtitles are saved in VTT format.
+        - The function uses yt-dlp to download the subtitles, ensure yt-dlp is installed and configured correctly.
+    """
+
+    video_url = f"https://www.youtube.com/watch?v={video_id}"
+    metadata = get_video_metadata(video_url)  # Fetch metadata to get upload date
+    udate = metadata['upload_date']  # Get upload date
+
+    output_file, clear_text_file = extracxt_n_clean_transcript(video_id, udate)
+    print(f"Transcript for video {video_id} downloaded to {output_file}")
+    return output_file, clear_text_file
+
+
+def send_sms(message_body="Here's a message from Twilio!", target_numbers=[]):
+    """
+    Send an SMS message using Twilio.
+    Args:
+        message_body (str): The body of the SMS message to send.
+    """
+    account_sid = os.environ["TWILIO_ACCOUNT_SID"]
+    auth_token = os.environ["TWILIO_AUTH_TOKEN"]
+    twilio_number = os.environ["TWILIO_PHONE_NUMBER"]
+    client = Client(account_sid, auth_token)
+
+
+    results = []
+    for number in target_numbers:
+        result = client.messages.create(
+            body=message_body,
+            from_=twilio_number,
+            to=number
+        )
+        results.append(result)
+    return results

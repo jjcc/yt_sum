@@ -44,6 +44,8 @@ def main(case=0):
         for index, row in df.iterrows():
             get_all_transcripts(get_video_transcript, row, index)
             print(f"Processing video {index + 1}/{len(df)}: {row['title']}")
+    if case == 4:
+       pass 
 
 
 

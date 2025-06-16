@@ -128,3 +128,14 @@ class TestConvert(unittest.TestCase):
 
         
 
+    def test_extract_transcript(self):
+        from service.helper import get_a_transcript
+        vid = "HEl3_2QpKdM"
+
+        output_file, clear_text_file = get_a_transcript(video_id=vid)
+        model = "gpt-4.1-mini"
+        from extracter import extract_stocks_from_transcript
+        with open(clear_text_file, "r", encoding="utf-8") as f:
+            transcript = f.read().strip()
+        output = extract_stocks_from_transcript(transcript, llm_model=model)
+        print(output)
